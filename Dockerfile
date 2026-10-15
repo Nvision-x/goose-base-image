@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go install -trimpath -ldflags="-s -w" "github.com/pressly/goose/v3/cmd/goose@${GOOSE_VERSION}" \
     && mkdir -p /out \
-    && cp "$(find /go/bin -type f -name goose | head -n1)" /out/goose
+    && find /go/bin -type f -name goose -exec cp {} /out/goose \;
 
 FROM alpine:${ALPINE_VERSION}
 # entrypoint.sh in every service repo is a bash script; alpine ships only busybox sh

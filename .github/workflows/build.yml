@@ -82,7 +82,6 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
-          no-fail: true
 
       - name: Push
         if: github.event_name != 'pull_request'

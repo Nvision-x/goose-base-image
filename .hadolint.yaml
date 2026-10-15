@@ -1,0 +1,4 @@
+ignored:
+  # apk packages stay unpinned on purpose: the weekly rebuild is what pulls in
+  # alpine security patches, and pinned versions disappear from the repo index
+  - DL3018
