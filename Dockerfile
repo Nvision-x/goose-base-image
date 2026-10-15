@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go install -trimpath -ldflags="-s -w" "github.com/pressly/goose/v3/cmd/goose@${GOOSE_VERSION}" \
     && mkdir -p /out \
-    && cp "$(find /go/bin -type f -name goose | head -n1)" /out/goose
+    && find /go/bin -type f -name goose -exec cp {} /out/goose \;
 
 FROM alpine:${ALPINE_VERSION}
 # entrypoint.sh in every service repo is a bash script; alpine ships only busybox sh
@@ -23,8 +23,10 @@ RUN apk upgrade --no-cache \
     && adduser -u 1000 -S -G goose -h /home/goose -s /sbin/nologin goose
 COPY --from=build /out/goose /bin/goose
 
-# service images ADD their migrations/ here; goose reads from cwd (and from
-# GOOSE_MIGRATION_DIR for entrypoints that run it from elsewhere)
+# /migrations is the contract: service images `COPY migrations/ ./` and never
+# name the path. goose reads from cwd (and from GOOSE_MIGRATION_DIR for
+# entrypoints that run it from elsewhere).
 WORKDIR /migrations
 ENV GOOSE_MIGRATION_DIR=/migrations
-ENTRYPOINT ["/migrations/entrypoint.sh"]
+# run through bash so the repo's file mode doesn't matter
+ENTRYPOINT ["bash", "/migrations/entrypoint.sh"]
