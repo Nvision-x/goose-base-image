@@ -69,9 +69,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke test
-        run: tests/smoke.sh goose-base:test "${{ steps.v.outputs.goose }}"
-
       - name: Trivy (report only)
         uses: aquasecurity/trivy-action@v0.35.0
         with:

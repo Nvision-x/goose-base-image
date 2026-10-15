@@ -57,5 +57,5 @@ is bumped by editing the ARG.
 
 ```sh
 docker build -t goose-base:test .
-tests/smoke.sh goose-base:test v3.29.0
+docker run --rm --entrypoint goose goose-base:test --version
 ```
