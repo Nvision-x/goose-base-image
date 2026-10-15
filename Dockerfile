@@ -23,8 +23,10 @@ RUN apk upgrade --no-cache \
     && adduser -u 1000 -S -G goose -h /home/goose -s /sbin/nologin goose
 COPY --from=build /out/goose /bin/goose
 
-# service images ADD their migrations/ here; goose reads from cwd (and from
-# GOOSE_MIGRATION_DIR for entrypoints that run it from elsewhere)
+# /migrations is the contract: service images `COPY migrations/ ./` and never
+# name the path. goose reads from cwd (and from GOOSE_MIGRATION_DIR for
+# entrypoints that run it from elsewhere).
 WORKDIR /migrations
 ENV GOOSE_MIGRATION_DIR=/migrations
-ENTRYPOINT ["/migrations/entrypoint.sh"]
+# run through bash so the repo's file mode doesn't matter
+ENTRYPOINT ["bash", "/migrations/entrypoint.sh"]

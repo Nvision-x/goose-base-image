@@ -25,16 +25,18 @@ Go toolchain and alpine packages are current without touching any service repo.
 ```dockerfile
 FROM ghcr.io/nvision-x/goose-base-image:v3
 
-ADD ./migrations/*.sql ./migrations/*.sh /migrations/
-RUN chmod +x /migrations/entrypoint.sh
+COPY migrations/ ./
 ```
+
+The layout is the contract, not a setting: a service repo keeps its SQL and
+`entrypoint.sh` under `migrations/` and never names the path in its Dockerfile.
 
 What the base provides:
 
 - `goose` on `PATH`, static binary
 - `bash` (the entrypoints are `#!/bin/bash`)
 - `WORKDIR /migrations` and `GOOSE_MIGRATION_DIR=/migrations`
-- `ENTRYPOINT ["/migrations/entrypoint.sh"]`
+- `ENTRYPOINT ["bash", "/migrations/entrypoint.sh"]`, so the file's exec bit doesn't matter
 - user `goose` (uid 1000); the image does not set `USER`, the pod `securityContext` does
 
 ## Bumping
