@@ -73,7 +73,7 @@ jobs:
         run: tests/smoke.sh goose-base:test "${{ steps.v.outputs.goose }}"
 
       - name: Trivy (report only)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: goose-base:test
           format: table
