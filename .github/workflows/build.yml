@@ -1,0 +1,110 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # weekly rebuild so the floating tags pick up Go stdlib and alpine patches
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # the goose version in the Dockerfile is the image version
+      - name: Resolve versions
+        id: v
+        run: |
+          goose=$(sed -n 's/^ARG GOOSE_VERSION=//p' Dockerfile)
+          [ -n "$goose" ] || { echo "GOOSE_VERSION not found in Dockerfile"; exit 1; }
+          {
+            echo "goose=$goose"
+            echo "minor=${goose%.*}"
+            echo "major=${goose%%.*}"
+            echo "image=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.v.outputs.image }}
+          tags: |
+            type=raw,value=${{ steps.v.outputs.goose }}
+            type=raw,value=${{ steps.v.outputs.minor }}
+            type=raw,value=${{ steps.v.outputs.major }}
+            type=raw,value=latest
+            type=raw,value=${{ steps.v.outputs.goose }}-{{date 'YYYYMMDD'}}
+            type=sha,prefix=sha-
+
+      - name: Build (amd64, local)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: goose-base:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: tests/smoke.sh goose-base:test "${{ steps.v.outputs.goose }}"
+
+      - name: Trivy (report only)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: goose-base:test
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          no-fail: true
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        if: github.event_name != 'pull_request'
+        run: |
+          {
+            echo "### goose-base ${{ steps.v.outputs.goose }}"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
