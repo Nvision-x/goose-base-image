@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # weekly rebuild so the floating tags pick up Go stdlib and alpine patches
+    # weekly rebuild so the floating tags pick up alpine package fixes
     - cron: '0 2 * * 1'
   workflow_dispatch:
 
@@ -69,12 +69,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Trivy (report only)
+      # a broken binary would land on every floating tag at once
+      - name: goose runs
+        run: docker run --rm --entrypoint goose goose-base:test --version
+
+      # gates: the image is tiny and currently clean, so any fixed HIGH/CRITICAL is a real regression
+      - name: Trivy
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: goose-base:test
           format: table
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 

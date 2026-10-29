@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
-ARG GO_VERSION=1.27.2
-ARG ALPINE_VERSION=3.24
 ARG GOOSE_VERSION=v3.29.0
 
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
+# base tags are written inline: Dependabot drops FROM lines whose tag is an ARG
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
 ARG GOOSE_VERSION
 ARG TARGETOS
 ARG TARGETARCH
@@ -15,10 +14,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     && mkdir -p /out \
     && find /go/bin -type f -name goose -exec cp {} /out/goose \;
 
-FROM alpine:${ALPINE_VERSION}
+FROM alpine:3.24
+ARG GOOSE_VERSION
+# inherited by every service image, so `docker inspect` tells which goose it carries
+LABEL io.nvisionx.goose.version=${GOOSE_VERSION}
 # entrypoint.sh in every service repo is a bash script; alpine ships only busybox sh
 RUN apk upgrade --no-cache \
-    && apk add --no-cache bash ca-certificates tzdata \
+    && apk add --no-cache bash ca-certificates \
     && addgroup -g 1000 -S goose \
     && adduser -u 1000 -S -G goose -h /home/goose -s /sbin/nologin goose
 COPY --from=build /out/goose /bin/goose
@@ -28,5 +30,7 @@ COPY --from=build /out/goose /bin/goose
 # entrypoints that run it from elsewhere).
 WORKDIR /migrations
 ENV GOOSE_MIGRATION_DIR=/migrations
+# numeric so runAsNonRoot can verify it; entrypoints only write under /tmp
+USER 1000:1000
 # run through bash so the repo's file mode doesn't matter
 ENTRYPOINT ["bash", "/migrations/entrypoint.sh"]
