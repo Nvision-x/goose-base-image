@@ -75,7 +75,7 @@ jobs:
 
       # gates: the image is tiny and currently clean, so any fixed HIGH/CRITICAL is a real regression
       - name: Trivy
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: goose-base:test
           format: table
