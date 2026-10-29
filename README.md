@@ -15,8 +15,6 @@ Image: `ghcr.io/nvision-x/goose-base-image`
 | `v3.29.0-YYYYMMDD` | one build, never moves |
 | `sha-<git sha>` | one build, never moves |
 
-Every tag is rebuilt on Monday 02:00 UTC and on every push to `main`, so the
-Go toolchain and alpine packages are current without touching any service repo.
 
 ## Use it in a service
 
@@ -37,21 +35,8 @@ What the base provides:
 - `bash` (the entrypoints are `#!/bin/bash`)
 - `WORKDIR /migrations` and `GOOSE_MIGRATION_DIR=/migrations`
 - `ENTRYPOINT ["bash", "/migrations/entrypoint.sh"]`, so the file's exec bit doesn't matter
-- user `goose` (uid 1000); the image does not set `USER`, the pod `securityContext` does
-
-## Bumping
-
-Everything is an `ARG` at the top of the `Dockerfile`:
-
-```dockerfile
-ARG GO_VERSION=1.27.2
-ARG ALPINE_VERSION=3.24
-ARG GOOSE_VERSION=v3.29.0
-```
-
-`GOOSE_VERSION` is the image version: the workflow derives `v3`, `v3.29` and
-`v3.29.0` from it. Dependabot keeps `golang` and `alpine` moving; goose itself
-is bumped by editing the ARG.
+- `USER 1000:1000` (numeric, so `runAsNonRoot` can verify it)
+- label `io.nvisionx.goose.version`, inherited by the service image
 
 ## Local check
 
