@@ -2,7 +2,7 @@
 ARG GOOSE_VERSION=v3.29.0
 
 # base tags are written inline: Dependabot drops FROM lines whose tag is an ARG
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine AS build
 ARG GOOSE_VERSION
 ARG TARGETOS
 ARG TARGETARCH
